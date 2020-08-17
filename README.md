@@ -8,11 +8,17 @@
 
 `player <filename>` or `player <filename> <fps>`
 
-* filename：将需要播放的视频文件放到Debug目录下，直接输入文件名；或使用文件完整路径。
+* `filename`：将需要播放的视频文件放到`player.exe`同一目录下，直接输入文件名；或使用文件完整路径。
 
-* fps：视频的帧数。不输入时默认为25帧/秒。
+* `fps`：视频的帧数。不输入时默认为25帧/秒。
 
 * 若提示找不到dll文件，将相应dll文件放到`player.exe`同一目录下即可
+
+## Dependency
+
+* [FFMPEG](http://ffmpeg.org/)
+
+* [SDL2.0](https://www.libsdl.org/download-2.0.php)
 
 ## Reference
 
