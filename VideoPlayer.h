@@ -10,6 +10,7 @@ class VideoPlayer {
 public:
 	//VideoPlayer(player_stat_t* input_is);
 	int video_player_init(char* filepath, int input_fps);
+	int video_playing();
 
 public:
 	player_stat_t* is;

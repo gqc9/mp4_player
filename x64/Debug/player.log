@@ -6,6 +6,6 @@ F:\bupt\网研保研\player\VideoPlayer.cpp(65,19): warning C4018: “<”: 有�
 F:\bupt\网研保研\player\VideoPlayer.cpp(66,29): warning C4996: 'AVStream::codec': 被声明为已否决
 F:\bupt\网研保研\player\VideoPlayer.cpp(76,40): warning C4996: 'AVStream::codec': 被声明为已否决
 F:\bupt\网研保研\player\VideoPlayer.cpp(43,2): warning C4996: 'av_register_all': 被声明为已否决
-F:\bupt\网研保研\player\VideoPlayer.cpp(311,4): warning C4996: 'av_free_packet': 被声明为已否决
-F:\bupt\网研保研\player\VideoPlayer.cpp(362,2): warning C4996: 'av_free_packet': 被声明为已否决
+F:\bupt\网研保研\player\VideoPlayer.cpp(322,4): warning C4996: 'av_free_packet': 被声明为已否决
+F:\bupt\网研保研\player\VideoPlayer.cpp(373,2): warning C4996: 'av_free_packet': 被声明为已否决
   player.vcxproj -> F:\bupt\网研保研\player\Debug\player.exe

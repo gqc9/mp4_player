@@ -90,12 +90,15 @@ int main(int argc, char* argv[]) {
 	AudioPlayer* audioPlayer = new AudioPlayer;
     audioPlayer->is = is;
     audioPlayer->audio_player_init(filepath);
-    audioPlayer->decode();
-    audioPlayer->audio_playing();
     
     VideoPlayer* videoPlayer = new VideoPlayer;
     videoPlayer->is = is;
 	videoPlayer->video_player_init(filepath, fps);
+
+    audioPlayer->decode();
+    videoPlayer->video_playing();
+    audioPlayer->audio_playing();
+
 
 
     system("pause");

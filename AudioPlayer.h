@@ -25,6 +25,7 @@ typedef struct _tFrame {
     void* data;
     int size;
     int samplerate;
+    double pts;
 }TFRAME, * PTFRAME;
 
 

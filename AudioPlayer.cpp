@@ -26,11 +26,7 @@ int AudioPlayer::SoundCallback(ALuint& bufferID) {
     alBufferData(bufferID, AL_FORMAT_STEREO16, frame->data, frame->size, frame->samplerate);
     //将buffer放回缓冲区
     alSourceQueueBuffers(m_source, 1, &bufferID);
-    //释放数据
-    if (frame) {
-        av_free(frame->data);
-        delete frame;
-    }
+
     int bytes_per_sec = av_samples_get_buffer_size(NULL, out_channel_nb, out_sample_rate, out_sample_fmt, 1);
     //更新时钟
     if (!isnan(is->audio_clock)) {
@@ -38,11 +34,15 @@ int AudioPlayer::SoundCallback(ALuint& bufferID) {
         // 前面audio_decode_frame中更新的is->audio_clock是以音频帧为单位，所以此处第二个参数要减去未拷贝数据量占用的时间
         set_clock_at(&is->audio_clk,
             //is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / is->audio_param_tgt.bytes_per_sec,
-            is->audio_clock,
-            //is->audio_clock_serial,
+            frame->pts,
             av_gettime_relative() / 1000000.0);
+        printf("audio pts update to %.2f\n", frame->pts);
     }
-
+    //释放数据
+    if (frame) {
+        av_free(frame->data);
+        delete frame;
+    }
     return 0;
 }
 
@@ -159,6 +159,21 @@ int AudioPlayer::decode() {
                     frame->data = out_buffer;
                     frame->size = out_buffer_size;
                     frame->samplerate = out_sample_rate;
+
+                    AVRational tb = { 1, pFrame->sample_rate };
+                    //pFrame->pts = av_rescale_q(pFrame->pts, pCodecCtx->pkt_timebase, tb) / 1000000.0;
+
+                    frame->pts = (pFrame->pts == AV_NOPTS_VALUE) ? NAN : pFrame->pts * av_q2d(tb);
+
+                    //if (!isnan(frame->pts)) {
+                    //    is->audio_clock = frame->pts + (double)pFrame->nb_samples / pFrame->sample_rate;
+                    //}
+
+                    //int raw_audio_time_base = av_inv_q(pCodecCtx->sample_rate);
+                    //av_packet_rescale_ts(packet, in_stream->time_base, raw_audio_time_base);
+
+                    //frame->pts = pFrame->pts;
+
                     queueData.push(frame);  //解码后数据存入队列
                 }
             }

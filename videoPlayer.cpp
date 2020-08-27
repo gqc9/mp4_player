@@ -29,7 +29,7 @@ void VideoPlayer::display_one_frame() {
 	//画面适配，适配后的像素数据存在pFrameYUV->data中
 	sws_scale(img_convert_ctx, (const unsigned char* const*)pFrame->data, pFrame->linesize, 0, pCodecCtx->height,
 		pFrameYUV->data, pFrameYUV->linesize);
-	printf("11\n");
+	printf("=======================================\n");
 	//SDL显示视频
 	SDL_UpdateTexture(sdlTexture, NULL, pFrameYUV->data[0], pFrameYUV->linesize[0]);
 	SDL_RenderClear(sdlRenderer);
@@ -89,7 +89,8 @@ int VideoPlayer::video_player_init(char* filepath, int input_fps) {
 	pFrame = av_frame_alloc();
 	pFrameYUV = av_frame_alloc();
 	packet = (AVPacket*)av_malloc(sizeof(AVPacket));
-	frame_queue_init(&fq, VIDEO_PICTURE_QUEUE_SIZE, 1);
+	//frame_queue_init(&fq, VIDEO_PICTURE_QUEUE_SIZE, 1);
+	frame_queue_init(&fq, 100, 1);
 	//缓冲区内存分配
 	out_buffer = (unsigned char*)av_malloc(av_image_get_buffer_size(AV_PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height, 1));
 	//缓冲区绑定到输出的AVFrame中
@@ -125,8 +126,6 @@ int VideoPlayer::video_player_init(char* filepath, int input_fps) {
 	sdlRect.w = screen_w;
 	sdlRect.h = screen_h;
 
-	m_pDecode1 = std::move(std::make_shared<std::thread>(&VideoPlayer::video_play_thread, this));
-	m_pDecode2 = std::move(std::make_shared<std::thread>(&VideoPlayer::video_decode_thread, this));
 	return 0;
 }
 
@@ -192,7 +191,7 @@ int VideoPlayer::video_refresh(double* remaining_time) {
 			// 当前帧vp未能及时播放，即下一帧播放时刻(is->frame_timer+duration)小于当前系统时刻(time)
 			if (time > is->frame_timer + duration) {
 				frame_queue_next(&fq);   // 删除上一帧已显示帧，即删除lastvp，读指针加1(从lastvp更新到vp)
-				flag = true;
+				//flag = true;
 			}
 		}
 	} while (flag);
@@ -230,11 +229,13 @@ double VideoPlayer::compute_target_delay(double delay) {
 
 	/* if video is slave, we try to correct big delays by
 	   duplicating or deleting a frame */
-	   // 视频时钟与同步时钟(如音频时钟)的差异，时钟值是上一帧pts值(实为：上一帧pts + 上一帧至今流逝的时间差)
+	    //视频时钟与同步时钟(如音频时钟)的差异，时钟值是上一帧pts值(实为：上一帧pts + 上一帧至今流逝的时间差)
 	diff = get_clock(&is->video_clk) - get_clock(&is->audio_clk);
+	//diff = get_clock(&is->video_clk) - is->audio_clk.pts/ 1000000.0;
+	printf("video_clk=%.2f, audio_clk=%.2f, diff=%.2f\n", get_clock(&is->video_clk), is->audio_clk.pts, diff);
+
 	// delay是上一帧播放时长：当前帧(待播放的帧)播放时间与上一帧播放时间差理论值
 	// diff是视频时钟与同步时钟的差值
-
 	/* skip or repeat frame. We take into account the
 	   delay to compute the threshold. I still don't know
 	   if it is the best guess */
@@ -249,9 +250,18 @@ double VideoPlayer::compute_target_delay(double delay) {
 			delay = delay + diff;           // 仅仅校正为delay=delay+diff，主要是AV_SYNC_FRAMEDUP_THRESHOLD参数的作用
 		else if (diff >= sync_threshold)    // 视频时钟超前于同步时钟，且超过同步域值
 			delay = 2 * delay;              // 视频播放要放慢脚步，delay扩大至2倍
+
+		//if (fabs(diff) < AV_NOSYNC_THRESHOLD) {
+		//	if (diff <= -sync_threshold)
+		//		delay = 0;
+		//	//假如当前帧的播放时间，也就是pts，超前于主时钟，那就需要加大延时
+		//	else if (diff >= sync_threshold)
+		//		delay = 2 * delay;
+		//}
 	}
 	
-	printf("video: delay=%0.3f A-V=%f\n", delay, -diff);
+
+	//printf("thresh=%0.3f delay=%0.3f A-V=%f\n", sync_threshold, delay, -diff);
 
 	return delay;
 }
@@ -307,6 +317,7 @@ int VideoPlayer::decode_frame(AVFrame* pFrame) {
 			if (got_picture==0) {					
 				//display_one_frame(pFrame);
 				pFrame->pts = pFrame->best_effort_timestamp;
+				return 1;
 			}
 			av_free_packet(packet);
 		//}
@@ -365,5 +376,13 @@ int VideoPlayer::destroy() {
 	SDL_Quit();
 	avcodec_close(pCodecCtx);
 	avformat_close_input(&pFormatCtx);
+	return 0;
+}
+
+int VideoPlayer::video_playing() {
+
+	m_pDecode1 = std::move(std::make_shared<std::thread>(&VideoPlayer::video_play_thread, this));
+	m_pDecode2 = std::move(std::make_shared<std::thread>(&VideoPlayer::video_decode_thread, this));
+
 	return 0;
 }

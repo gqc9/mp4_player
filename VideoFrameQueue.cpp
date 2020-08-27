@@ -87,12 +87,14 @@ void frame_queue_push(frame_queue_t* f) {
         f->windex = 0;
     SDL_LockMutex(f->mutex);
     f->size++;
+    printf("size++\n");
     SDL_CondSignal(f->cond);
     SDL_UnlockMutex(f->mutex);
 }
 
 // 读指针(rindex)指向的帧已显示，删除此帧，注意不读取直接删除。读指针加1
 void frame_queue_next(frame_queue_t* f) {
+    printf("next.f->size=%d\n",f->size);
     if (f->keep_last && !f->rindex_shown) {
         f->rindex_shown = 1;
         return;
@@ -102,6 +104,7 @@ void frame_queue_next(frame_queue_t* f) {
         f->rindex = 0;
     SDL_LockMutex(f->mutex);
     f->size--;
+    printf("size--\n");
     SDL_CondSignal(f->cond);
     SDL_UnlockMutex(f->mutex);
 }
@@ -128,6 +131,7 @@ int queue_picture(frame_queue_t* f, AVFrame* src_frame, double pts, double durat
 
     if (!(vp = frame_queue_peek_writable(f)))
         return -1;
+
 
     vp->sar = src_frame->sample_aspect_ratio;
     vp->uploaded = 0;
