@@ -1,6 +1,7 @@
 #pragma once
 
 #include "main.h"
+#include "VideoFrameQueue.h"
 
 #define SFM_REFRESH_EVENT  (SDL_USEREVENT + 1)
 #define SFM_BREAK_EVENT  (SDL_USEREVENT + 2)
@@ -22,10 +23,7 @@ private:
 	void display_one_frame();
 	int video_decode_thread();
 	int decode_frame(AVFrame* pFrame);
-
-	double vp_duration(frame_t* vp, frame_t* nextvp);
 	double compute_target_delay(double delay);
-	void update_video_pts(player_stat_t* is, double pts, int64_t pos, int serial);
 
 private:
 	std::shared_ptr<std::thread> m_pPlay;
@@ -40,7 +38,7 @@ private:
 	int index;
 	unsigned char* out_buffer;	//数据缓冲区
 	struct SwsContext* img_convert_ctx;
-	frame_queue_t fq;
+	VideoFrameQueue fq = VideoFrameQueue(VIDEO_PICTURE_QUEUE_SIZE, 1);
 
 	int screen_w = 0, screen_h = 0;
 	SDL_Window* screen; //SDL弹出的窗口
@@ -51,13 +49,5 @@ private:
 	//SDL_Event event; //线程状态
 
 	double refresh_rate;	//刷新率=每秒多少帧
-	//flag
-	int flag_exit = 0;
-	int flag_pause = 0;
-
 
 };
-
-//VideoPlayer::VideoPlayer(player_stat_t* input_is) {
-//	this->is = input_is;
-//}

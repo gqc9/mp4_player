@@ -107,17 +107,10 @@ int AudioPlayer::SoundCallback(ALuint& bufferID) {
     alBufferData(bufferID, AL_FORMAT_STEREO16, frame->data, frame->size, frame->samplerate);
     //将buffer放回缓冲区
     alSourceQueueBuffers(m_source, 1, &bufferID);
-
-    int bytes_per_sec = av_samples_get_buffer_size(NULL, out_channel_nb, out_sample_rate, out_sample_fmt, 1);
-    //更新时钟
+    //更新音频时钟
     if (!isnan(is->audio_clock)) {
-        // 更新音频时钟，更新时刻：每次往声卡缓冲区拷入数据后
-        // 前面audio_decode_frame中更新的is->audio_clock是以音频帧为单位，所以此处第二个参数要减去未拷贝数据量占用的时间
-        set_clock_at(&is->audio_clk,
-            //is->audio_clock - (double)(2 * is->audio_hw_buf_size + is->audio_write_buf_size) / is->audio_param_tgt.bytes_per_sec,
-            frame->pts,
-            av_gettime_relative() / 1000000.0);
-        printf("audio pts update to %.2f\n", frame->pts);
+        set_clock(&is->audio_clk, frame->pts);
+        //printf("audio pts %.2f\n", frame->pts);
     }
     //释放数据
     if (frame) {
@@ -234,6 +227,7 @@ int AudioPlayer::audio_play_thread() {
     Play();
 
     while (!queueData.empty()) {  //队列为空后停止播放
+        if (is->flag_pause) continue;
         ALint processed = 0;
         alGetSourcei(m_source, AL_BUFFERS_PROCESSED, &processed);
         while (processed > 0) {
@@ -251,6 +245,7 @@ int AudioPlayer::audio_play_thread() {
     alDeleteSources(1, &m_source);
 
     printf("End.\n");
+    is->flag_exit = 1;
 
     return 0;
 }

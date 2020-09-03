@@ -36,9 +36,6 @@ public:
     int decode();
     int audio_playing();
 
-public:
-    player_stat_t* is;
-
 private:
     int OpenAL_init();
     int SoundCallback(ALuint& bufferID);
@@ -46,6 +43,9 @@ private:
     int destory();
     //int start_playing();
     int audio_play_thread();
+
+public:
+    player_stat_t* is;
 
 private:
     std::shared_ptr<std::thread> m_pAudio;

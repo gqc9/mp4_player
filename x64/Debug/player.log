@@ -1,10 +1,10 @@
 ﻿  VideoPlayer.cpp
 F:\bupt\网研保研\player\include\libavutil\rational.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
-F:\bupt\网研保研\player\VideoPlayer.cpp(30,19): warning C4018: “<”: 有符号/无符号不匹配
-F:\bupt\网研保研\player\VideoPlayer.cpp(31,29): warning C4996: 'AVStream::codec': 被声明为已否决
-F:\bupt\网研保研\player\VideoPlayer.cpp(41,40): warning C4996: 'AVStream::codec': 被声明为已否决
-F:\bupt\网研保研\player\VideoPlayer.cpp(8,2): warning C4996: 'av_register_all': 被声明为已否决
-F:\bupt\网研保研\player\VideoPlayer.cpp(99,2): warning C4996: 'av_free_packet': 被声明为已否决
-F:\bupt\网研保研\player\VideoPlayer.cpp(115,17): warning C4244: “参数”: 从“double”转换到“Uint32”，可能丢失数据
-F:\bupt\网研保研\player\VideoPlayer.cpp(315,3): warning C4996: 'av_free_packet': 被声明为已否决
+F:\bupt\网研保研\player\VideoPlayer.cpp(29,19): warning C4018: “<”: 有符号/无符号不匹配
+F:\bupt\网研保研\player\VideoPlayer.cpp(30,29): warning C4996: 'AVStream::codec': 被声明为已否决
+F:\bupt\网研保研\player\VideoPlayer.cpp(40,40): warning C4996: 'AVStream::codec': 被声明为已否决
+F:\bupt\网研保研\player\VideoPlayer.cpp(7,2): warning C4996: 'av_register_all': 被声明为已否决
+F:\bupt\网研保研\player\VideoPlayer.cpp(96,2): warning C4996: 'av_free_packet': 被声明为已否决
+F:\bupt\网研保研\player\VideoPlayer.cpp(112,17): warning C4244: “参数”: 从“double”转换到“Uint32”，可能丢失数据
+F:\bupt\网研保研\player\VideoPlayer.cpp(285,3): warning C4996: 'av_free_packet': 被声明为已否决
   player.vcxproj -> F:\bupt\网研保研\player\Debug\player.exe

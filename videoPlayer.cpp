@@ -1,6 +1,5 @@
 #include "VideoPlayer.h"
 #include "main.h"
-#include "VideoFrameQueue.h"
 
 VideoPlayer::VideoPlayer(char* filepath, player_stat_t* is1) {
 	is = is1;
@@ -54,8 +53,6 @@ VideoPlayer::VideoPlayer(char* filepath, player_stat_t* is1) {
 	pFrame = av_frame_alloc();
 	pFrameYUV = av_frame_alloc();
 	packet = (AVPacket*)av_malloc(sizeof(AVPacket));
-	//frame_queue_init(&fq, VIDEO_PICTURE_QUEUE_SIZE, 1);
-	frame_queue_init(&fq, 100, 1);
 	//缓冲区内存分配
 	out_buffer = (unsigned char*)av_malloc(av_image_get_buffer_size(AV_PIX_FMT_YUV420P, pCodecCtx->width, pCodecCtx->height, 1));
 	//缓冲区绑定到输出的AVFrame中
@@ -125,7 +122,7 @@ int VideoPlayer::sfp_refresh_thread() {
 
 
 void VideoPlayer::display_one_frame() {
-	frame_t* pFrame_t = frame_queue_peek_last(&fq);
+	frame_t* pFrame_t = fq.peek_last();
 	AVFrame* pFrame = pFrame_t->frame;
 	//pFrameYUV = av_frame_alloc();
 	//画面适配，适配后的像素数据存在pFrameYUV->data中
@@ -146,109 +143,87 @@ int VideoPlayer::video_refresh(double* remaining_time) {
 	bool flag = false;
 
 	do {
-		if (frame_queue_nb_remaining(&fq) == 0) { // 所有帧已显示
+		if (fq.nb_remaining() == 0) { // 所有帧已显示
 			return 0;
 		}
 
 		double last_duration, duration, delay;
 		frame_t* vp, * lastvp;
 
-		/* dequeue the picture */
-		lastvp = frame_queue_peek_last(&fq);     // 上一帧：上次已显示的帧
-		vp = frame_queue_peek(&fq);              // 当前帧：当前待显示的帧
+		lastvp = fq.peek_last();//上一帧：上次已显示的帧
+		vp = fq.peek();         //待显示的帧
 
-		// lastvp和vp不是同一播放序列(一个seek会开始一个新播放序列)，将frame_timer更新为当前时间
-		if (first_frame) {
-			is->frame_timer = av_gettime_relative() / 1000000.0;
-			first_frame = false;
-		}
+		//// lastvp和vp不是同一播放序列(一个seek会开始一个新播放序列)，将frame_timer更新为当前时间
+		//if (first_frame) {
+		//	is->frame_timer = av_gettime_relative() / 1000000.0;
+		//	first_frame = false;
+		//}
 
-		// 暂停处理：不停播放上一帧图像
-		if (flag_pause)
-			display_one_frame();
-
-		/* compute nominal last_duration */
-		last_duration = vp_duration(lastvp, vp);        // 上一帧播放时长：vp->pts - lastvp->pts
-		delay = compute_target_delay(last_duration);    // 根据视频时钟和同步时钟的差值，计算delay值
+		last_duration = vp->pts - lastvp->pts;	//上一帧播放时长。待播放的帧的播放时间与上一帧的时间差。通过调节此值来调节当前帧播放快慢
+		delay = compute_target_delay(last_duration);    // 根据视频时钟和同步时钟的差值，计算delay值 
 
 		time = av_gettime_relative()/1000000.0;
-		// 当前帧播放时刻(is->frame_timer+delay)大于当前时刻(time)，表示播放时刻未到
+		//当前系统时刻 < 当前帧播放时刻，表示播放时刻未到
 		if (time < is->frame_timer + delay) {
-			// 播放时刻未到，则更新刷新时间remaining_time为当前时刻到下一播放时刻的时间差
+			//更新刷新时间remaining_time为当前时刻到下一播放时刻的时间差，
 			*remaining_time = FFMIN(is->frame_timer + delay - time, *remaining_time);
-			// 播放时刻未到，则不播放，直接返回
+			//不播放，直接返回
 			return 0;
 		}
 
-		// 更新frame_timer值
+		//更新frame_timer值
 		is->frame_timer += delay;
-		// 校正frame_timer值：若frame_timer落后于当前系统时间太久(超过最大同步域值)，则更新为当前系统时间
+		//校正frame_timer值：若frame_timer落后于当前系统时间太久(超过最大同步域值)，则更新为当前系统时间
 		if (delay > 0 && time - is->frame_timer > AV_SYNC_THRESHOLD_MAX) {
 			is->frame_timer = time;
 		}
 
 		SDL_LockMutex(fq.mutex);
 		if (!isnan(vp->pts)) {
-			update_video_pts(is, vp->pts, vp->pos, vp->serial); // 更新视频时钟：时间戳、时钟时间
+			set_clock(&is->video_clk, vp->pts);	//更新视频时钟
 		}
 		SDL_UnlockMutex(fq.mutex);
 
-		// 是否要丢弃未能及时播放的视频帧
-		if (frame_queue_nb_remaining(&fq) > 1) { // 队列中未显示帧数>1(只有一帧则不考虑丢帧)
-			frame_t* nextvp = frame_queue_peek_next(&fq);  // 下一帧：下一待显示的帧
-			duration = vp_duration(vp, nextvp);             // 当前帧vp播放时长 = nextvp->pts - vp->pts
-			// 当前帧vp未能及时播放，即下一帧播放时刻(is->frame_timer+duration)小于当前系统时刻(time)
+		//如果队列中只剩一帧，不丢弃没来得及播放的帧
+		if (fq.nb_remaining() > 1) {
+			frame_t* nextvp = fq.peek_next();  //下一个待显示的帧
+			duration = nextvp->pts - vp->pts;  //当前帧vp播放时长
+			//当前系统时刻 > 下一帧播放时刻，当前帧vp未能及时播放
 			if (time > is->frame_timer + duration) {
-				frame_queue_next(&fq);   // 删除上一帧已显示帧，即删除lastvp，读指针加1(从lastvp更新到vp)
+				fq.pop();   //删除上一帧已显示帧(从lastvp更新到vp)
 				flag = true;
 			}
 		}
 	} while (flag);
 
-	// 删除当前读指针元素，读指针+1。若未丢帧，读指针从lastvp更新到vp；若有丢帧，读指针从vp更新到nextvp
-	frame_queue_next(&fq);
-
-//display:
-	display_one_frame();   // 取出当前帧vp(若有丢帧是nextvp)进行播放
+	//删除当前读指针元素，读指针+1。若未丢帧，读指针从lastvp更新到vp；若有丢帧，读指针从vp更新到nextvp
+	fq.pop();
+	//取出当前帧vp(若有丢帧是nextvp)进行播放
+	display_one_frame();   
 	return 0;
 }
 
 
-double VideoPlayer::vp_duration(frame_t* vp, frame_t* nextvp) {
-	if (vp->serial == nextvp->serial) {
-		double duration = nextvp->pts - vp->pts;
-		if (isnan(duration) || duration <= 0)
-			return vp->duration;
-		else
-			return duration;
-	}
-	else {
-		return 0.0;
-	}
-}
-
-
 // 根据视频时钟与音频时钟的差值，校正delay值，使视频时钟追赶（跳过帧）或等待（重复播放帧）音频时钟
-// 输入参数delay是上一帧播放时长，即上一帧播放后应延时多长时间后再播放当前帧，通过调节此值来调节当前帧播放快慢
-// 返回校正后的delay值
 double VideoPlayer::compute_target_delay(double delay) {
+	// 若delay < AV_SYNC_THRESHOLD_MIN，则同步域值为AV_SYNC_THRESHOLD_MIN
+	// 若delay > AV_SYNC_THRESHOLD_MAX，则同步域值为AV_SYNC_THRESHOLD_MAX
+	// 若AV_SYNC_THRESHOLD_MIN < delay < AV_SYNC_THRESHOLD_MAX，则同步域值为delay
 	double sync_threshold = FFMAX(AV_SYNC_THRESHOLD_MIN, FFMIN(AV_SYNC_THRESHOLD_MAX, delay));
 	//视频与音频时钟的差值，时钟值是上一帧pts值(实为：上一帧pts + 上一帧至今流逝的时间差)
 	double diff = get_clock(&is->video_clk) - get_clock(&is->audio_clk);	
 
 	printf("video_clk=%.2f, audio_clk=%.2f, diff=%.2f\n", get_clock(&is->video_clk), is->audio_clk.pts, diff);
 
-	// delay是上一帧播放时长：当前帧(待播放的帧)播放时间与上一帧播放时间差理论值
-	// 若delay < AV_SYNC_THRESHOLD_MIN，则同步域值为AV_SYNC_THRESHOLD_MIN
-	// 若delay > AV_SYNC_THRESHOLD_MAX，则同步域值为AV_SYNC_THRESHOLD_MAX
-	// 若AV_SYNC_THRESHOLD_MIN < delay < AV_SYNC_THRESHOLD_MAX，则同步域值为delay
 	if (!isnan(diff)) {
-		if (diff <= -sync_threshold)        // 视频时钟落后于同步时钟，且超过同步域值
+		if (diff <= -sync_threshold)        // 视频时钟落后音频时钟，且超过同步域值
 			delay = FFMAX(0, delay + diff); // 当前帧播放时刻落后于同步时钟(delay+diff<0)则delay=0(视频追赶，立即播放)，否则delay=delay+diff
-		else if (diff >= sync_threshold && delay > AV_SYNC_FRAMEDUP_THRESHOLD)  // 视频时钟超前于同步时钟，且超过同步域值，但上一帧播放时长超长
-			delay = delay + diff;           // 仅仅校正为delay=delay+diff，主要是AV_SYNC_FRAMEDUP_THRESHOLD参数的作用
-		else if (diff >= sync_threshold)    // 视频时钟超前于同步时钟，且超过同步域值
-			delay = 2 * delay;              // 视频播放要放慢脚步，delay扩大至2倍
+		//视频时钟超前音频时钟，且超过同步域值，但上一帧播放时长超长
+		else if (diff >= sync_threshold && delay > AV_SYNC_FRAMEDUP_THRESHOLD) 
+			delay = delay + diff; // 仅仅校正为delay=delay+diff，主要是AV_SYNC_FRAMEDUP_THRESHOLD参数的作用
+		//视频时钟超前音频时钟，且超过同步域值，放慢视频播放，加大延时
+		else if (diff >= sync_threshold)
+			delay = 2 * delay;
 
 		//if (fabs(diff) < AV_NOSYNC_THRESHOLD) {
 		//	if (diff <= -sync_threshold)
@@ -265,22 +240,17 @@ double VideoPlayer::compute_target_delay(double delay) {
 }
 
 
-void VideoPlayer::update_video_pts(player_stat_t* is, double pts, int64_t pos, int serial) {
-	/* update current video pts */
-	set_clock(&is->video_clk, pts);            // 更新vidclock
-	//-sync_clock_to_slave(&is->extclk, &is->vidclk);  // 将extclock同步到vidclock
-}
-
-
 int VideoPlayer::video_play_thread() {
 	double remaining_time = 0.0;
 
-	while (!flag_exit) {
+	while (!is->flag_exit) {
+		if (is->flag_pause) continue;
+
 		if (remaining_time > 0.0) {
 			av_usleep((unsigned)(remaining_time * 1000000.0));
 		}
 		remaining_time = 1/refresh_rate;
-		// 立即显示当前帧，或延时remaining_time后再显示
+		//判断延时时间并显示一帧
 		video_refresh(&remaining_time);
 	}
 
@@ -293,7 +263,7 @@ int VideoPlayer::decode_frame(AVFrame* pFrame) {
 	while (1) {
 		while (1) {
 			if (av_read_frame(pFormatCtx, packet) < 0) {//解封装媒体文件
-				//thread_exit = 1;
+				is->flag_exit = 1;
 				//printf("av_read_frame() error.\n");
 				return 0;
 			}
@@ -302,7 +272,7 @@ int VideoPlayer::decode_frame(AVFrame* pFrame) {
 			}
 		}
 
-		// 解码packet至pFrame		
+		// 解码packet至pFrame
 		ret = avcodec_send_packet(pCodecCtx, packet);	//将AVPacket数据放入待解码队列中
 		if (ret < 0) {
 			printf("Decode Error.\n");
@@ -334,16 +304,18 @@ int VideoPlayer::video_decode_thread() {
 		return AVERROR(ENOMEM);
 	}
 
-	while (!flag_exit) {
+	while (1) {
 		got_picture = decode_frame(p_frame);
 		if (got_picture < 0) {
 			av_frame_free(&p_frame);
+
+			printf("e\n");
 			return 0;
 		}
 		AVRational avr = {frame_rate.den, frame_rate.num};
 		duration = (frame_rate.num && frame_rate.den ? av_q2d(avr) : 0);   // 当前帧播放时长
 		pts = (p_frame->pts == AV_NOPTS_VALUE) ? NAN : p_frame->pts * av_q2d(tb);   // 当前帧显示时间戳
-		ret = queue_picture(&fq, p_frame, pts, duration, p_frame->pkt_pos);   // 将当前帧压入frame_queue
+		ret = fq.queue_picture(p_frame, pts, duration, p_frame->pkt_pos);   // 将当前帧压入frame_queue
 		av_frame_unref(p_frame);
 
 		if (ret < 0) {
