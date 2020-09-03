@@ -69,10 +69,14 @@ int main(int argc, char* argv[]) {
                         printf("pause\n");
                         is->flag_pause = !is->flag_pause;
                         break;
-                    case SDLK_a:
-                    printf("forward 10s\n");
-                    is->forward_10 = 1;
-                    break;
+                    case SDLK_1:    //前进10秒
+                        printf("forward 10s\n");
+                        is->forward = 10;
+                        break;
+                    case SDLK_3:    //前进10秒
+                        printf("forward 30s\n");
+                        is->forward = 30;
+                        break;
                 }
             }
         }

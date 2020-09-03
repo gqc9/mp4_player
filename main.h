@@ -71,7 +71,7 @@ typedef struct {
     //flag
     int flag_exit;
     int flag_pause;
-    int forward_10;
+    int forward;
 }   player_stat_t;
 
 

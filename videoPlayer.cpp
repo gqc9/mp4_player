@@ -160,14 +160,13 @@ int VideoPlayer::video_refresh(double* remaining_time) {
 		//}
 
 		last_duration = vp->pts - lastvp->pts;	//上一帧播放时长。待播放的帧的播放时间与上一帧的时间差。通过调节此值来调节当前帧播放快慢
-		delay = compute_target_delay(last_duration);    // 根据视频时钟和同步时钟的差值，计算delay值 
+		delay = compute_target_delay(last_duration);
 
 		time = av_gettime_relative()/1000000.0;
-		//当前系统时刻 < 当前帧播放时刻，表示播放时刻未到
+		//当前系统时刻 < 当前帧播放时刻，表示播放时刻未到，不播放，直接返回
 		if (time < is->frame_timer + delay) {
 			//更新刷新时间remaining_time为当前时刻到下一播放时刻的时间差，
 			*remaining_time = FFMIN(is->frame_timer + delay - time, *remaining_time);
-			//不播放，直接返回
 			return 0;
 		}
 
@@ -213,7 +212,7 @@ double VideoPlayer::compute_target_delay(double delay) {
 	//视频与音频时钟的差值，时钟值是上一帧pts值(实为：上一帧pts + 上一帧至今流逝的时间差)
 	double diff = get_clock(&is->video_clk) - get_clock(&is->audio_clk);	
 
-	printf("video_clk=%.2f, audio_clk=%.2f, diff=%.2f\n", get_clock(&is->video_clk), is->audio_clk.pts, diff);
+	printf("video_clk=%.2f, audio_clk=%.2f, diff=%.2f\n", get_clock(&is->video_clk), get_clock(&is->audio_clk), diff);
 
 	if (!isnan(diff)) {
 		if (diff <= -sync_threshold)        // 视频时钟落后音频时钟，且超过同步域值
@@ -245,6 +244,10 @@ int VideoPlayer::video_play_thread() {
 
 	while (!is->flag_exit) {
 		if (is->flag_pause) continue;
+		//if (is->forward_10) {
+		//	is->forward_10 = !is->forward_10;
+		//	forward_func(10);
+		//}
 
 		if (remaining_time > 0.0) {
 			av_usleep((unsigned)(remaining_time * 1000000.0));
@@ -256,6 +259,7 @@ int VideoPlayer::video_play_thread() {
 
 	return 0;
 }
+
 
 int VideoPlayer::decode_frame(AVFrame* pFrame) {
 	int ret, got_picture;

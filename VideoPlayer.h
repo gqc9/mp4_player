@@ -24,6 +24,7 @@ private:
 	int video_decode_thread();
 	int decode_frame(AVFrame* pFrame);
 	double compute_target_delay(double delay);
+	//void forward_func(int second);
 
 private:
 	std::shared_ptr<std::thread> m_pPlay;

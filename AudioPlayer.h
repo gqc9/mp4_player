@@ -43,6 +43,7 @@ private:
     int destory();
     //int start_playing();
     int audio_play_thread();
+    void forward_func(int second);
 
 public:
     player_stat_t* is;

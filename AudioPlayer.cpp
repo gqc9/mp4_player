@@ -228,6 +228,10 @@ int AudioPlayer::audio_play_thread() {
 
     while (!queueData.empty()) {  //队列为空后停止播放
         if (is->flag_pause) continue;
+        if (is->forward) {
+            forward_func(is->forward);
+            is->forward = 0;
+        }
         ALint processed = 0;
         alGetSourcei(m_source, AL_BUFFERS_PROCESSED, &processed);
         while (processed > 0) {
@@ -248,6 +252,26 @@ int AudioPlayer::audio_play_thread() {
     is->flag_exit = 1;
 
     return 0;
+}
+
+
+void AudioPlayer::forward_func(int second) {
+    double target_pts = get_clock(&is->audio_clk) + second;
+    printf("to %.2f s\n", target_pts);
+
+    while (!queueData.empty()) {
+        PTFRAME frame = queueData.front();
+        queueData.pop();
+        if (frame == nullptr)
+            return;
+        if (frame->pts >= target_pts) break;
+        //释放数据
+        if (frame) {
+            av_free(frame->data);
+            delete frame;
+        }
+    }
+
 }
 
 
