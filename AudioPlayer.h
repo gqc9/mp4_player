@@ -31,7 +31,8 @@ typedef struct _tFrame {
 
 class AudioPlayer {
 public:
-    int audio_player_init(char* filepath);
+    AudioPlayer(char* filepath, player_stat_t* is);
+    ~AudioPlayer();
     int decode();
     int audio_playing();
 

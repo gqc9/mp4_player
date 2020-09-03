@@ -1,6 +1,87 @@
 #include "AudioPlayer.h"
 
 
+AudioPlayer::AudioPlayer(char* filepath, player_stat_t* is1) {
+    is = is1;
+
+    av_register_all();	//注册库
+    avformat_network_init();
+    avcodec_register_all();
+    pFormatCtx = avformat_alloc_context();
+
+    //打开视频文件，初始化pFormatCtx
+    if (avformat_open_input(&pFormatCtx, filepath, NULL, NULL) != 0) {
+        printf("Couldn't open input stream.\n");
+        return;
+    }
+    //获取文件信息
+    if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
+        printf("Couldn't find stream information.\n");
+        return;
+    }
+    //获取各个媒体流的编码器信息，找到对应的type所在的pFormatCtx->streams的索引位置，初始化编码器。播放音频时type是AUDIO
+    index = -1;
+    for (int i = 0; i<pFormatCtx->nb_streams; i++)
+        if (pFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+            index = i;
+            break;
+        }
+    if (index == -1) {
+        printf("Didn't find a audio stream.\n");
+        return;
+    }
+    //获取解码器
+    pCodec = avcodec_find_decoder(pFormatCtx->streams[index]->codecpar->codec_id);
+    if (pCodec == NULL) {
+        printf("Codec not found.\n");
+        return;
+    }
+    pCodecCtx = avcodec_alloc_context3(pCodec);
+    avcodec_parameters_to_context(pCodecCtx, pFormatCtx->streams[index]->codecpar);
+    pCodecCtx->pkt_timebase = pFormatCtx->streams[index]->time_base;
+    //打开解码器
+    if (avcodec_open2(pCodecCtx, pCodec, NULL)<0) {
+        printf("Couldn't open codec.\n");
+        return;
+    }
+
+    //内存分配
+    packet = (AVPacket*)av_malloc(sizeof(AVPacket));
+    pFrame = av_frame_alloc();
+    swrCtx = swr_alloc();
+
+    //设置采样参数 frame->16bit双声道 采样率44100 PCM采样格式   
+    enum AVSampleFormat in_sample_fmt = pCodecCtx->sample_fmt;  //输入的采样格式  
+    out_sample_fmt = AV_SAMPLE_FMT_S16; //输出采样格式16bit PCM  
+    int in_sample_rate = pCodecCtx->sample_rate; //输入采样率
+    out_sample_rate = in_sample_rate; //输出采样率  
+    uint64_t in_ch_layout = pCodecCtx->channel_layout; //输入的声道布局   
+    uint64_t out_ch_layout = AV_CH_LAYOUT_STEREO; //输出的声道布局（立体声）
+    swr_alloc_set_opts(swrCtx,
+        out_ch_layout, out_sample_fmt, out_sample_rate,
+        in_ch_layout, in_sample_fmt, in_sample_rate,
+        0, NULL); //设置参数
+    swr_init(swrCtx); //初始化
+
+    //根据声道布局获取输出的声道个数
+    out_channel_nb = av_get_channel_layout_nb_channels(out_ch_layout);
+}
+
+
+AudioPlayer::~AudioPlayer() {
+    av_frame_free(&pFrame);
+    //av_free(out_buffer);
+    swr_free(&swrCtx);
+
+    ALCcontext* pCurContext = alcGetCurrentContext();
+    ALCdevice* pCurDevice = alcGetContextsDevice(pCurContext);
+
+    alcMakeContextCurrent(NULL);
+    alcDestroyContext(pCurContext);
+    alcCloseDevice(pCurDevice);
+}
+
+
 int AudioPlayer::OpenAL_init() {
     ALCdevice* pDevice;
     ALCcontext* pContext;
@@ -53,73 +134,6 @@ int AudioPlayer::Play() {
         alSourcePlay(m_source);
     }
     return 0;
-}
-
-
-int AudioPlayer::audio_player_init(char* filepath) {
-    av_register_all();	//注册库
-    avformat_network_init();
-    avcodec_register_all();
-    pFormatCtx = avformat_alloc_context();
-
-    //打开视频文件，初始化pFormatCtx
-    if (avformat_open_input(&pFormatCtx, filepath, NULL, NULL) != 0) {
-        printf("Couldn't open input stream.\n");
-        return -1;
-    }
-    //获取文件信息
-    if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
-        printf("Couldn't find stream information.\n");
-        return -1;
-    }
-    //获取各个媒体流的编码器信息，找到对应的type所在的pFormatCtx->streams的索引位置，初始化编码器。播放音频时type是AUDIO
-    index = -1;
-    for (int i = 0; i<pFormatCtx->nb_streams; i++)
-        if (pFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
-            index = i;
-            break;
-        }
-    if (index == -1) {
-        printf("Didn't find a audio stream.\n");
-        return -1;
-    }
-    //获取解码器
-    pCodec = avcodec_find_decoder(pFormatCtx->streams[index]->codecpar->codec_id);
-    if (pCodec == NULL) {
-        printf("Codec not found.\n");
-        return -1;
-    }
-    pCodecCtx = avcodec_alloc_context3(pCodec);
-    avcodec_parameters_to_context(pCodecCtx, pFormatCtx->streams[index]->codecpar);
-    pCodecCtx->pkt_timebase = pFormatCtx->streams[index]->time_base;
-    //打开解码器
-    if (avcodec_open2(pCodecCtx, pCodec, NULL)<0) {
-        printf("Couldn't open codec.\n");
-        return -1;
-    }
-
-    //内存分配
-    packet = (AVPacket*)av_malloc(sizeof(AVPacket));
-    pFrame = av_frame_alloc();
-    swrCtx = swr_alloc();
-
-    //设置采样参数 frame->16bit双声道 采样率44100 PCM采样格式   
-    enum AVSampleFormat in_sample_fmt = pCodecCtx->sample_fmt;  //输入的采样格式  
-    out_sample_fmt = AV_SAMPLE_FMT_S16; //输出采样格式16bit PCM  
-    int in_sample_rate = pCodecCtx->sample_rate; //输入采样率
-    out_sample_rate = in_sample_rate; //输出采样率  
-    uint64_t in_ch_layout = pCodecCtx->channel_layout; //输入的声道布局   
-    uint64_t out_ch_layout = AV_CH_LAYOUT_STEREO; //输出的声道布局（立体声）
-    swr_alloc_set_opts(swrCtx,
-        out_ch_layout, out_sample_fmt, out_sample_rate,
-        in_ch_layout, in_sample_fmt, in_sample_rate,
-        0, NULL); //设置参数
-    swr_init(swrCtx); //初始化
-
-    //根据声道布局获取输出的声道个数
-    out_channel_nb = av_get_channel_layout_nb_channels(out_ch_layout);
-
-   
 }
 
 
@@ -238,28 +252,8 @@ int AudioPlayer::audio_play_thread() {
 
     printf("End.\n");
 
-
-
     return 0;
 }
-
-
-int AudioPlayer::destory() {
-    av_frame_free(&pFrame);
-    //av_free(out_buffer);
-    swr_free(&swrCtx);
-
-
-    ALCcontext* pCurContext = alcGetCurrentContext();
-    ALCdevice* pCurDevice = alcGetContextsDevice(pCurContext);
-
-    alcMakeContextCurrent(NULL);
-    alcDestroyContext(pCurContext);
-    alcCloseDevice(pCurDevice);
-
-    return 0;
-}
-
 
 
 int AudioPlayer::audio_playing() {

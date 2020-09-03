@@ -2,11 +2,6 @@
 #include "main.h"
 
 
-void frame_queue_unref_item(frame_t* vp) {
-    av_frame_unref(vp->frame);
-}
-
-
 int frame_queue_init(frame_queue_t* f, /*packet_queue_t* pktq, */int max_size, int keep_last) {
     int i;
     memset(f, 0, sizeof(frame_queue_t));
@@ -31,7 +26,7 @@ void frame_queue_destory(frame_queue_t* f) {
     int i;
     for (i = 0; i < f->max_size; i++) {
         frame_t* vp = &f->queue[i];
-        frame_queue_unref_item(vp);
+        av_frame_unref(vp->frame);
         av_frame_free(&vp->frame);
     }
     SDL_DestroyMutex(f->mutex);
@@ -87,24 +82,21 @@ void frame_queue_push(frame_queue_t* f) {
         f->windex = 0;
     SDL_LockMutex(f->mutex);
     f->size++;
-    printf("size++\n");
     SDL_CondSignal(f->cond);
     SDL_UnlockMutex(f->mutex);
 }
 
 // 读指针(rindex)指向的帧已显示，删除此帧，注意不读取直接删除。读指针加1
 void frame_queue_next(frame_queue_t* f) {
-    printf("next.f->size=%d\n",f->size);
     if (f->keep_last && !f->rindex_shown) {
         f->rindex_shown = 1;
         return;
     }
-    frame_queue_unref_item(&f->queue[f->rindex]);
+    av_frame_unref(f->queue[f->rindex].frame);
     if (++f->rindex == f->max_size)
         f->rindex = 0;
     SDL_LockMutex(f->mutex);
     f->size--;
-    printf("size--\n");
     SDL_CondSignal(f->cond);
     SDL_UnlockMutex(f->mutex);
 }
@@ -131,7 +123,6 @@ int queue_picture(frame_queue_t* f, AVFrame* src_frame, double pts, double durat
 
     if (!(vp = frame_queue_peek_writable(f)))
         return -1;
-
 
     vp->sar = src_frame->sample_aspect_ratio;
     vp->uploaded = 0;

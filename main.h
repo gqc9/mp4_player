@@ -31,8 +31,6 @@ extern "C" {
 /* no AV correction is done if too big error */
 #define AV_NOSYNC_THRESHOLD 10.0
 
-
-
 #define VIDEO_PICTURE_QUEUE_SIZE 3
 #define SUBPICTURE_QUEUE_SIZE 16
 #define SAMPLE_QUEUE_SIZE 9

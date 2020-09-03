@@ -8,29 +8,28 @@
 
 class VideoPlayer {
 public:
-	//VideoPlayer(player_stat_t* input_is);
-	int video_player_init(char* filepath, int input_fps);
+	VideoPlayer(char* filepath, player_stat_t* is);
+	~VideoPlayer();
 	int video_playing();
 
 public:
 	player_stat_t* is;
 
 private:
-	static int sfp_refresh_thread(void* opaque);
+	int sfp_refresh_thread();
 	int video_play_thread();
 	int video_refresh(double* remaining_time);
 	void display_one_frame();
 	int video_decode_thread();
 	int decode_frame(AVFrame* pFrame);
-	int destroy();
 
 	double vp_duration(frame_t* vp, frame_t* nextvp);
 	double compute_target_delay(double delay);
 	void update_video_pts(player_stat_t* is, double pts, int64_t pos, int serial);
 
 private:
-	std::shared_ptr<std::thread> m_pDecode1;
-	std::shared_ptr<std::thread> m_pDecode2;
+	std::shared_ptr<std::thread> m_pPlay;
+	std::shared_ptr<std::thread> m_pDecode;
 
 	AVFormatContext* pFormatCtx; //解封装
 	AVCodecContext* pCodecCtx; //解码
@@ -48,13 +47,13 @@ private:
 	SDL_Renderer* sdlRenderer; //渲染器，渲染SDL_Texture至SDL_Window
 	SDL_Texture* sdlTexture; //纹理
 	SDL_Rect sdlRect;
-	SDL_Thread* video_tid; //多线程，同步刷新时间
-	SDL_Event event; //线程状态
+	//SDL_Thread* video_tid; //多线程，同步刷新时间
+	//SDL_Event event; //线程状态
 
-	int fps;
+	double refresh_rate;	//刷新率=每秒多少帧
 	//flag
-	//int thread_exit = 0;
-	//int thread_pause = 0;
+	int flag_exit = 0;
+	int flag_pause = 0;
 
 
 };
