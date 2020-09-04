@@ -15,4 +15,6 @@ target_link_libraries(player
 	swscale
 	SDL2
 	SDL2main
+	EFX-Util
+	OpenAL32
 )
