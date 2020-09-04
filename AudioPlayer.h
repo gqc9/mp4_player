@@ -19,6 +19,8 @@ extern "C" {
 
 #define MAX_AUDIO_FARME_SIZE 48000 * 2
 #define NUMBUFFERS (4)
+#define VOLUME_UP 0.2
+#define VOLUME_DOWN -0.2
 
 
 typedef struct _tFrame {
@@ -35,12 +37,12 @@ public:
     ~AudioPlayer();
     int decode();
     int audio_playing();
+    void adjustVolume(double v);
 
 private:
     int OpenAL_init();
     int SoundCallback(ALuint& bufferID);
     int Play();
-    //int start_playing();
     int audio_play_thread();
     void forward_func(int second);
 
@@ -68,6 +70,8 @@ private:
     std::queue<PTFRAME> queueData; //保存解码后数据
     ALuint m_source;
     ALuint m_buffers[NUMBUFFERS];
+
+    double volume;    //音量
 };
 
 

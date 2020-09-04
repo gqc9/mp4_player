@@ -3,6 +3,7 @@
 
 AudioPlayer::AudioPlayer(char* filepath, player_stat_t* is1) {
     is = is1;
+    volume = 1.0;
 
     av_register_all();	//×¢²á¿â
     avformat_network_init();
@@ -120,6 +121,13 @@ int AudioPlayer::SoundCallback(ALuint& bufferID) {
     return 0;
 }
 
+
+void AudioPlayer::adjustVolume(double v) {
+    volume = FFMAX(0, volume + v);
+    alSourcef(m_source, AL_GAIN, volume);
+}
+
+
 int AudioPlayer::Play() {
     int state;
     alGetSourcei(m_source, AL_SOURCE_STATE, &state);
@@ -131,7 +139,7 @@ int AudioPlayer::Play() {
 
 
 int AudioPlayer::decode() {
-    printf("Decode...\n");
+    //printf("Decode...\n");
     out_buffer = (uint8_t*)av_malloc(MAX_AUDIO_FARME_SIZE);
     int ret;
     while (av_read_frame(pFormatCtx, packet) >= 0) {
@@ -177,7 +185,7 @@ int AudioPlayer::decode() {
         av_packet_unref(packet);
     }
 
-    printf("Decoding ended.\n");
+    //printf("Decoding ended.\n");
 }
 
 

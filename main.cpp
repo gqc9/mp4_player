@@ -14,6 +14,7 @@ double get_clock(play_clock_t* c) {
     }
 }
 
+
 void set_clock(play_clock_t* c, double pts) {
     double time = av_gettime_relative() / 1000000.0;
     c->pts = pts;
@@ -30,17 +31,16 @@ void init_clock(play_clock_t* c) {
 
 int main(int argc, char* argv[]) {
 	//获取文件路径
-	char filepath[] = "F:/bupt/网研保研/player/Debug/Audio_Video_Sync_Test.mp4";		
-    //char filepath[] = "F:/bupt/网研保研/player/Debug/jojo.mp4";
+	char filepath[] = "./Debug/Audio_Video_Sync_Test.mp4";
 
-	/*char* filepath;
-	if (argc==2) {
-		filepath = argv[1];
-	}
-	else {
-		printf("Usage: player <filename>");
-		return -1;
-	}*/
+	//char* filepath;
+	//if (argc==2) {
+	//	filepath = argv[1];
+	//}
+	//else {
+	//	printf("Usage: player <filename>");
+	//	return -1;
+	//}
 
 	player_stat_t* is;
     is = (player_stat_t*)av_mallocz(sizeof(player_stat_t));
@@ -76,6 +76,14 @@ int main(int argc, char* argv[]) {
                     case SDLK_3:    //前进30秒
                         printf("forward 30s\n");
                         is->forward = 30;
+                        break;
+                    case SDLK_u:    //音量+
+                        printf("volume up\n");
+                        audioPlayer->adjustVolume(VOLUME_UP);
+                        break;
+                    case SDLK_d:    //音量+
+                        printf("volume down\n");
+                        audioPlayer->adjustVolume(VOLUME_DOWN);
                         break;
                 }
             }

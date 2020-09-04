@@ -3,9 +3,6 @@
 #include "main.h"
 #include "VideoFrameQueue.h"
 
-#define SFM_REFRESH_EVENT  (SDL_USEREVENT + 1)
-#define SFM_BREAK_EVENT  (SDL_USEREVENT + 2)
-
 
 class VideoPlayer {
 public:
@@ -17,7 +14,6 @@ public:
 	player_stat_t* is;
 
 private:
-	int sfp_refresh_thread();
 	int video_play_thread();
 	int video_refresh(double* remaining_time);
 	void display_one_frame();
@@ -39,7 +35,7 @@ private:
 	int index;
 	unsigned char* out_buffer;	//数据缓冲区
 	struct SwsContext* img_convert_ctx;
-	VideoFrameQueue fq = VideoFrameQueue(VIDEO_PICTURE_QUEUE_SIZE, 1);
+	VideoFrameQueue fq = VideoFrameQueue();
 
 	int screen_w = 0, screen_h = 0;
 	SDL_Window* screen; //SDL弹出的窗口

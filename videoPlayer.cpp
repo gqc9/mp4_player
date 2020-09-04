@@ -102,25 +102,6 @@ VideoPlayer::~VideoPlayer() {
 }
 
 
-//创建了一个SDL线程，每隔固定时间（=刷新间隔）发送一个自定义的消息，告知主函数进行解码显示，使画面刷新间隔保持在40毫秒
-int VideoPlayer::sfp_refresh_thread() {
-	//while (!thread_exit) {
-	while (1) {
-		SDL_Event event;
-		event.type = SFM_REFRESH_EVENT;
-		SDL_PushEvent(&event);
-		SDL_Delay(1000/refresh_rate);
-	}
-	//thread_exit = 0;
-
-	SDL_Event event;
-	event.type = SFM_BREAK_EVENT;
-	SDL_PushEvent(&event);
-
-	return 0;
-}
-
-
 void VideoPlayer::display_one_frame() {
 	frame_t* pFrame_t = fq.peek_last();
 	AVFrame* pFrame = pFrame_t->frame;
@@ -128,7 +109,7 @@ void VideoPlayer::display_one_frame() {
 	//画面适配，适配后的像素数据存在pFrameYUV->data中
 	sws_scale(img_convert_ctx, (const unsigned char* const*)pFrame->data, pFrame->linesize, 0, pCodecCtx->height,
 		pFrameYUV->data, pFrameYUV->linesize);
-	printf("=======================================\n");
+	//printf("=======================================\n");
 	//SDL显示视频
 	SDL_UpdateTexture(sdlTexture, NULL, pFrameYUV->data[0], pFrameYUV->linesize[0]);
 	SDL_RenderClear(sdlRenderer);
@@ -205,7 +186,7 @@ double VideoPlayer::compute_target_delay(double delay) {
 	//视频与音频时钟的差值，时钟值是上一帧pts值(实为：上一帧pts + 上一帧至今流逝的时间差)
 	double diff = get_clock(&is->video_clk) - get_clock(&is->audio_clk);	
 
-	printf("video_clk=%.2f, audio_clk=%.2f, diff=%.2f\n", get_clock(&is->video_clk), get_clock(&is->audio_clk), diff);
+	//printf("video_clk=%.2f, audio_clk=%.2f, diff=%.2f\n", get_clock(&is->video_clk), get_clock(&is->audio_clk), diff);
 
 	if (!isnan(diff)) {
 		//视频时钟落后音频时钟，且超过同步域值
@@ -215,8 +196,6 @@ double VideoPlayer::compute_target_delay(double delay) {
 		else if (diff >= sync_threshold)
 			delay = 2 * delay;
 	}	
-
-	//printf("thresh=%0.3f delay=%0.3f A-V=%f\n", sync_threshold, delay, -diff);
 
 	return delay;
 }

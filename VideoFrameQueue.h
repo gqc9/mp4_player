@@ -4,7 +4,7 @@
 
 class VideoFrameQueue {
 public:
-	VideoFrameQueue(int max_size, int keep_last);
+	VideoFrameQueue();
 	~VideoFrameQueue();
 	frame_t* peek();
 	frame_t* peek_next();
@@ -26,7 +26,6 @@ private:
 	int windex = 0;     //写索引
 	int size = 0;       //总帧数
 	int max_size;       //可存储的最大帧数
-	int keep_last;
 	int rindex_shown = 0; //当前是否有帧在显示
 };
 

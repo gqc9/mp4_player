@@ -2,7 +2,7 @@
 #include "main.h"
 
 
-VideoFrameQueue::VideoFrameQueue(int maxs, int keep_last) {
+VideoFrameQueue::VideoFrameQueue() {
     memset(queue, 0, sizeof(queue));
     if (!(mutex = SDL_CreateMutex())) {
         printf("SDL_CreateMutex(): %s\n", SDL_GetError());
@@ -12,8 +12,7 @@ VideoFrameQueue::VideoFrameQueue(int maxs, int keep_last) {
         printf("SDL_CreateCond(): %s\n", SDL_GetError());
         return;
     }
-    max_size = FFMIN(maxs, FRAME_QUEUE_SIZE);
-    keep_last = !!keep_last;
+    max_size = FRAME_QUEUE_SIZE;
     for (int i = 0; i < max_size; i++) {
         if (!(queue[i].frame = av_frame_alloc())) {
             printf("alloc() error\n");
@@ -81,7 +80,7 @@ void VideoFrameQueue::push() {
 
 //É¾³ýÒ»Ö¡£¬¶ÁÖ¸Õë¼Ó1
 void VideoFrameQueue::pop() {
-    if (keep_last && !rindex_shown) {
+    if (!rindex_shown) {
         rindex_shown = 1;
         return;
     }
