@@ -46,8 +46,6 @@ private:
 	SDL_Renderer* sdlRenderer; //渲染器，渲染SDL_Texture至SDL_Window
 	SDL_Texture* sdlTexture; //纹理
 	SDL_Rect sdlRect;
-	//SDL_Thread* video_tid; //多线程，同步刷新时间
-	//SDL_Event event; //线程状态
 
 	double refresh_rate;	//刷新率=每秒多少帧
 

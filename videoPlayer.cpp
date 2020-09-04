@@ -139,27 +139,20 @@ void VideoPlayer::display_one_frame() {
 
 int VideoPlayer::video_refresh(double* remaining_time) {
 	double time;
-	static bool first_frame = true;
 	bool flag = false;
 
 	do {
-		if (fq.nb_remaining() == 0) { // 所有帧已显示
+		if (fq.nb_remaining() == 0) { //所有帧都已显示
 			return 0;
 		}
 
 		double last_duration, duration, delay;
 		frame_t* vp, * lastvp;
 
-		lastvp = fq.peek_last();//上一帧：上次已显示的帧
+		lastvp = fq.peek_last();//上一张已显示的帧
 		vp = fq.peek();         //待显示的帧
 
-		//// lastvp和vp不是同一播放序列(一个seek会开始一个新播放序列)，将frame_timer更新为当前时间
-		//if (first_frame) {
-		//	is->frame_timer = av_gettime_relative() / 1000000.0;
-		//	first_frame = false;
-		//}
-
-		last_duration = vp->pts - lastvp->pts;	//上一帧播放时长。待播放的帧的播放时间与上一帧的时间差。通过调节此值来调节当前帧播放快慢
+		last_duration = vp->pts - lastvp->pts;	//上一帧播放时长：待播放帧的播放时间与上一帧的时间差。通过调节此值来调节当前帧播放快慢
 		delay = compute_target_delay(last_duration);
 
 		time = av_gettime_relative()/1000000.0;
@@ -205,8 +198,8 @@ int VideoPlayer::video_refresh(double* remaining_time) {
 
 // 根据视频时钟与音频时钟的差值，校正delay值，使视频时钟追赶（跳过帧）或等待（重复播放帧）音频时钟
 double VideoPlayer::compute_target_delay(double delay) {
-	// 若delay < AV_SYNC_THRESHOLD_MIN，则同步域值为AV_SYNC_THRESHOLD_MIN
-	// 若delay > AV_SYNC_THRESHOLD_MAX，则同步域值为AV_SYNC_THRESHOLD_MAX
+	// 若delay < AV_SYNC_THRESHOLD_MIN，同步域值为AV_SYNC_THRESHOLD_MIN
+	// 若delay > AV_SYNC_THRESHOLD_MAX，同步域值为AV_SYNC_THRESHOLD_MAX
 	// 若AV_SYNC_THRESHOLD_MIN < delay < AV_SYNC_THRESHOLD_MAX，则同步域值为delay
 	double sync_threshold = FFMAX(AV_SYNC_THRESHOLD_MIN, FFMIN(AV_SYNC_THRESHOLD_MAX, delay));
 	//视频与音频时钟的差值，时钟值是上一帧pts值(实为：上一帧pts + 上一帧至今流逝的时间差)
@@ -215,22 +208,12 @@ double VideoPlayer::compute_target_delay(double delay) {
 	printf("video_clk=%.2f, audio_clk=%.2f, diff=%.2f\n", get_clock(&is->video_clk), get_clock(&is->audio_clk), diff);
 
 	if (!isnan(diff)) {
-		if (diff <= -sync_threshold)        // 视频时钟落后音频时钟，且超过同步域值
-			delay = FFMAX(0, delay + diff); // 当前帧播放时刻落后于同步时钟(delay+diff<0)则delay=0(视频追赶，立即播放)，否则delay=delay+diff
-		//视频时钟超前音频时钟，且超过同步域值，但上一帧播放时长超长
-		else if (diff >= sync_threshold && delay > AV_SYNC_FRAMEDUP_THRESHOLD) 
-			delay = delay + diff; // 仅仅校正为delay=delay+diff，主要是AV_SYNC_FRAMEDUP_THRESHOLD参数的作用
+		//视频时钟落后音频时钟，且超过同步域值
+		if (diff <= -sync_threshold)        
+			delay = FFMAX(0, delay + diff); // 当前帧播放时刻落后于音频时钟(delay+diff<0)则delay=0(视频追赶，立即播放)，否则delay=delay+diff
 		//视频时钟超前音频时钟，且超过同步域值，放慢视频播放，加大延时
 		else if (diff >= sync_threshold)
 			delay = 2 * delay;
-
-		//if (fabs(diff) < AV_NOSYNC_THRESHOLD) {
-		//	if (diff <= -sync_threshold)
-		//		delay = 0;
-		//	//假如当前帧的播放时间，也就是pts，超前于主时钟，那就需要加大延时
-		//	else if (diff >= sync_threshold)
-		//		delay = 2 * delay;
-		//}
 	}	
 
 	//printf("thresh=%0.3f delay=%0.3f A-V=%f\n", sync_threshold, delay, -diff);
@@ -244,10 +227,6 @@ int VideoPlayer::video_play_thread() {
 
 	while (!is->flag_exit) {
 		if (is->flag_pause) continue;
-		//if (is->forward_10) {
-		//	is->forward_10 = !is->forward_10;
-		//	forward_func(10);
-		//}
 
 		if (remaining_time > 0.0) {
 			av_usleep((unsigned)(remaining_time * 1000000.0));

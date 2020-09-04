@@ -30,8 +30,8 @@ void init_clock(play_clock_t* c) {
 
 int main(int argc, char* argv[]) {
 	//获取文件路径
-	//char filepath[] = "F:/bupt/网研保研/player/Debug/Audio_Video_Sync_Test.mp4";		
-    char filepath[] = "F:/bupt/网研保研/player/Debug/jojo.mp4";
+	char filepath[] = "F:/bupt/网研保研/player/Debug/Audio_Video_Sync_Test.mp4";		
+    //char filepath[] = "F:/bupt/网研保研/player/Debug/jojo.mp4";
 
 	/*char* filepath;
 	if (argc==2) {
@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
                         printf("forward 10s\n");
                         is->forward = 10;
                         break;
-                    case SDLK_3:    //前进10秒
+                    case SDLK_3:    //前进30秒
                         printf("forward 30s\n");
                         is->forward = 30;
                         break;

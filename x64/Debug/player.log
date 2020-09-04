@@ -1,3 +1,21 @@
-﻿  main.cpp
+﻿  AudioPlayer.cpp
 F:\bupt\网研保研\player\include\libavutil\rational.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+F:\bupt\网研保研\player\AudioPlayer.cpp(24,22): warning C4018: “<”: 有符号/无符号不匹配
+F:\bupt\网研保研\player\AudioPlayer.cpp(7,5): warning C4996: 'av_register_all': 被声明为已否决
+F:\bupt\网研保研\player\AudioPlayer.cpp(9,5): warning C4996: 'avcodec_register_all': 被声明为已否决
+  VideoFrameQueue.cpp
+F:\bupt\网研保研\player\include\libavutil\rational.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+  main.cpp
+F:\bupt\网研保研\player\include\libavutil\rational.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+  正在生成代码...
+F:\bupt\网研保研\player\AudioPlayer.cpp(192): warning C4715: “AudioPlayer::decode”: 不是所有的控件路径都返回值
+  VideoPlayer.cpp
+F:\bupt\网研保研\player\include\libavutil\rational.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+F:\bupt\网研保研\player\VideoPlayer.cpp(29,19): warning C4018: “<”: 有符号/无符号不匹配
+F:\bupt\网研保研\player\VideoPlayer.cpp(30,29): warning C4996: 'AVStream::codec': 被声明为已否决
+F:\bupt\网研保研\player\VideoPlayer.cpp(40,40): warning C4996: 'AVStream::codec': 被声明为已否决
+F:\bupt\网研保研\player\VideoPlayer.cpp(7,2): warning C4996: 'av_register_all': 被声明为已否决
+F:\bupt\网研保研\player\VideoPlayer.cpp(96,2): warning C4996: 'av_free_packet': 被声明为已否决
+F:\bupt\网研保研\player\VideoPlayer.cpp(112,17): warning C4244: “参数”: 从“double”转换到“Uint32”，可能丢失数据
+F:\bupt\网研保研\player\VideoPlayer.cpp(278,3): warning C4996: 'av_free_packet': 被声明为已否决
   player.vcxproj -> F:\bupt\网研保研\player\Debug\player.exe

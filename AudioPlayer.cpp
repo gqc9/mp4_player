@@ -168,18 +168,7 @@ int AudioPlayer::decode() {
                     frame->samplerate = out_sample_rate;
 
                     AVRational tb = { 1, pFrame->sample_rate };
-                    //pFrame->pts = av_rescale_q(pFrame->pts, pCodecCtx->pkt_timebase, tb) / 1000000.0;
-
                     frame->pts = (pFrame->pts == AV_NOPTS_VALUE) ? NAN : pFrame->pts * av_q2d(tb);
-
-                    //if (!isnan(frame->pts)) {
-                    //    is->audio_clock = frame->pts + (double)pFrame->nb_samples / pFrame->sample_rate;
-                    //}
-
-                    //int raw_audio_time_base = av_inv_q(pCodecCtx->sample_rate);
-                    //av_packet_rescale_ts(packet, in_stream->time_base, raw_audio_time_base);
-
-                    //frame->pts = pFrame->pts;
 
                     queueData.push(frame);  //解码后数据存入队列
                 }
@@ -257,7 +246,7 @@ int AudioPlayer::audio_play_thread() {
 
 void AudioPlayer::forward_func(int second) {
     double target_pts = get_clock(&is->audio_clk) + second;
-    printf("to %.2f s\n", target_pts);
+    printf("To %.2f s\n", target_pts);
 
     while (!queueData.empty()) {
         PTFRAME frame = queueData.front();
@@ -271,7 +260,6 @@ void AudioPlayer::forward_func(int second) {
             delete frame;
         }
     }
-
 }
 
 

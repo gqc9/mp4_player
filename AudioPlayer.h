@@ -40,7 +40,6 @@ private:
     int OpenAL_init();
     int SoundCallback(ALuint& bufferID);
     int Play();
-    int destory();
     //int start_playing();
     int audio_play_thread();
     void forward_func(int second);
