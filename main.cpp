@@ -29,9 +29,22 @@ void init_clock(play_clock_t* c) {
 }
 
 
+//void control_thread(player_stat_t* is) {
+//    printf("control start\n");
+//
+//    while (1) {
+//        if (is->flag_fullscreen) {
+//            is->flag_fullscreen = !is->flag_fullscreen;
+//            //do_fullscreen();
+//        }
+//    }
+//}
+
+
 int main(int argc, char* argv[]) {
 	//获取文件路径
 	char filepath[] = "./Debug/Audio_Video_Sync_Test.mp4";
+    //char filepath[] = "./Debug/jojo.mp4";
 
 	//char* filepath;
 	//if (argc==2) {
@@ -42,6 +55,7 @@ int main(int argc, char* argv[]) {
 	//	return -1;
 	//}
 
+
 	player_stat_t* is;
     is = (player_stat_t*)av_mallocz(sizeof(player_stat_t));
     if (!is) {
@@ -49,6 +63,7 @@ int main(int argc, char* argv[]) {
     }
     init_clock(&is->video_clk);
     init_clock(&is->audio_clk);
+
 
 	AudioPlayer* audioPlayer = new AudioPlayer(filepath, is);    
     VideoPlayer* videoPlayer = new VideoPlayer(filepath, is);
@@ -60,33 +75,53 @@ int main(int argc, char* argv[]) {
     SDL_Event event;
     while (!is->flag_exit) {
         if (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
+            if (event.type == SDL_QUIT) {   //关闭窗口
                 is->flag_exit = 1;
             }
-            if (event.type == SDL_KEYDOWN) {//键盘事件
+            else if (event.type == SDL_KEYDOWN) {//键盘事件
                 switch (event.key.keysym.sym) {
                     case SDLK_p:    //按p暂停，再按p恢复播放
                         printf("pause\n");
                         is->flag_pause = !is->flag_pause;
                         break;
-                    case SDLK_1:    //前进10秒
+                    case SDLK_1:    //按1前进10秒
                         printf("forward 10s\n");
                         is->forward = 10;
                         break;
-                    case SDLK_3:    //前进30秒
+                    case SDLK_3:    //按3前进30秒
                         printf("forward 30s\n");
                         is->forward = 30;
                         break;
-                    case SDLK_u:    //音量+
+                    case SDLK_u:    //按u音量+
                         printf("volume up\n");
-                        audioPlayer->adjustVolume(VOLUME_UP);
+                        audioPlayer->adjust_volume(VOLUME_UP);
                         break;
-                    case SDLK_d:    //音量+
+                    case SDLK_d:    //按d音量-
                         printf("volume down\n");
-                        audioPlayer->adjustVolume(VOLUME_DOWN);
+                        audioPlayer->adjust_volume(VOLUME_DOWN);
+                        break;
+                    case SDLK_f:    //按f全屏
+                        printf("full screen\n");
+                        is->flag_fullscreen = !is->flag_fullscreen;
+                        videoPlayer->do_fullscreen();
+                        break;
+                    case SDLK_q:    //按q加速quick
+                        printf("speed up\n");                        
+                        audioPlayer->adjust_speed(SPEED_UP);
+                        break;
+                    case SDLK_s:    //按q加速slow
+                        printf("speed down\n");
+                        audioPlayer->adjust_speed(SPEED_DOWN);
                         break;
                 }
             }
+            else if (event.type == SDL_WINDOWEVENT) {   //缩放窗口
+                if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                    printf("resize window\n");
+                    videoPlayer->resize_window(event.window.data1, event.window.data2);
+                }
+            }
+
         }
     }
 

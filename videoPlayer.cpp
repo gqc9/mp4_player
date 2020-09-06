@@ -4,6 +4,11 @@
 VideoPlayer::VideoPlayer(char* filepath, player_stat_t* is1) {
 	is = is1;
 
+	if (!(display_mutex = SDL_CreateMutex())) {
+		printf("SDL_CreateMutex(): %s\n", SDL_GetError());
+		return;
+	}
+
 	av_register_all();	//注册库
 	avformat_network_init();
 	pFormatCtx = avformat_alloc_context();
@@ -73,7 +78,7 @@ VideoPlayer::VideoPlayer(char* filepath, player_stat_t* is1) {
 	screen_h = pCodecCtx->height;
 	//SDL 2.0 Support for multiple windows
 	screen = SDL_CreateWindow(filepath, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-		screen_w, screen_h, SDL_WINDOW_OPENGL);
+		screen_w, screen_h, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
 
 	if (!screen) {
 		printf("SDL: could not create window - exiting:%s\n", SDL_GetError());
@@ -109,12 +114,14 @@ void VideoPlayer::display_one_frame() {
 	//画面适配，适配后的像素数据存在pFrameYUV->data中
 	sws_scale(img_convert_ctx, (const unsigned char* const*)pFrame->data, pFrame->linesize, 0, pCodecCtx->height,
 		pFrameYUV->data, pFrameYUV->linesize);
-	//printf("=======================================\n");
+	printf("=======================================\n");
 	//SDL显示视频
+	SDL_LockMutex(display_mutex);
 	SDL_UpdateTexture(sdlTexture, NULL, pFrameYUV->data[0], pFrameYUV->linesize[0]);
 	SDL_RenderClear(sdlRenderer);
-	SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, NULL);
+	SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &sdlRect);
 	SDL_RenderPresent(sdlRenderer);
+	SDL_UnlockMutex(display_mutex);
 }
 
 
@@ -171,8 +178,9 @@ int VideoPlayer::video_refresh(double* remaining_time) {
 
 	//删除当前读指针元素，读指针+1。若未丢帧，读指针从lastvp更新到vp；若有丢帧，读指针从vp更新到nextvp
 	fq.pop();
-	//取出当前帧vp(若有丢帧是nextvp)进行播放
-	display_one_frame();   
+	//播放
+	display_one_frame();
+
 	return 0;
 }
 
@@ -289,11 +297,51 @@ int VideoPlayer::video_decode_thread() {
 }
 
 
+int VideoPlayer::render_refresh() {
+	SDL_LockMutex(display_mutex);	//不加锁有时会冲突	
+	SDL_RenderClear(sdlRenderer);
+	SDL_RenderPresent(sdlRenderer);
+	SDL_UnlockMutex(display_mutex);
+	return 0;
+}
+
+
+int VideoPlayer::do_fullscreen() {
+	if (is->flag_fullscreen) {
+		SDL_SetWindowFullscreen(screen, SDL_TRUE);
+	}
+	else {
+		SDL_SetWindowFullscreen(screen, SDL_FALSE);
+	}
+	render_refresh();
+	return 0;
+}
+
+
+int VideoPlayer::resize_window(int width, int height) {
+	//保持画面比例
+	double tmp = double(screen_h) / screen_w * width;
+	if (tmp < height) {
+		sdlRect.x = 0;
+		sdlRect.y = (height - tmp) / 2;
+		sdlRect.w = width;
+		sdlRect.h = tmp;
+	}
+	else {
+		tmp = double(screen_w) / screen_h * height;
+		sdlRect.x = (width - tmp) / 2;
+		sdlRect.y = 0;
+		sdlRect.w = tmp;
+		sdlRect.h = height;
+	}
+
+	render_refresh();
+	
+	return 0;
+}
 
 int VideoPlayer::video_playing() {
 	m_pPlay = std::move(std::make_shared<std::thread>(&VideoPlayer::video_play_thread, this));
 	m_pDecode = std::move(std::make_shared<std::thread>(&VideoPlayer::video_decode_thread, this));
-
-	//printf("video_playing() return\n");
 	return 0;
 }

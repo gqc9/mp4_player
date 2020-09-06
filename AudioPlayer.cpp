@@ -4,6 +4,7 @@
 AudioPlayer::AudioPlayer(char* filepath, player_stat_t* is1) {
     is = is1;
     volume = 1.0;
+    speed = 1.0;
 
     av_register_all();	//注册库
     avformat_network_init();
@@ -122,7 +123,7 @@ int AudioPlayer::SoundCallback(ALuint& bufferID) {
 }
 
 
-void AudioPlayer::adjustVolume(double v) {
+void AudioPlayer::adjust_volume(double v) {
     volume = FFMAX(0, volume + v);
     alSourcef(m_source, AL_GAIN, volume);
 }
@@ -224,7 +225,9 @@ int AudioPlayer::audio_play_thread() {
     Play();
 
     while (!queueData.empty()) {  //队列为空后停止播放
+        //检查暂停
         if (is->flag_pause) continue;
+        //检查快进
         if (is->forward) {
             forward_func(is->forward);
             is->forward = 0;
@@ -254,7 +257,7 @@ int AudioPlayer::audio_play_thread() {
 
 void AudioPlayer::forward_func(int second) {
     double target_pts = get_clock(&is->audio_clk) + second;
-    printf("To %.2f s\n", target_pts);
+    printf("volume to %.2f s\n", target_pts);
 
     while (!queueData.empty()) {
         PTFRAME frame = queueData.front();
@@ -268,6 +271,13 @@ void AudioPlayer::forward_func(int second) {
             delete frame;
         }
     }
+}
+
+
+void AudioPlayer::adjust_speed(double v) {
+    speed = FFMAX(FFMIN(2.0, v+speed), 0.5);
+    printf("speed to %.2f s\n", speed);
+    alSourcef(m_source, AL_PITCH, speed);
 }
 
 

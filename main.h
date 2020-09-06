@@ -27,11 +27,7 @@ extern "C" {
 #define AV_SYNC_THRESHOLD_MAX 0.1
 /* If a frame duration is longer than this, it will not be duplicated to compensate AV sync */
 #define AV_SYNC_FRAMEDUP_THRESHOLD 0.1
-
-//#define VIDEO_PICTURE_QUEUE_SIZE 3
-//#define SUBPICTURE_QUEUE_SIZE 16
-//#define SAMPLE_QUEUE_SIZE 9
-//#define FRAME_QUEUE_SIZE FFMAX(SAMPLE_QUEUE_SIZE, FFMAX(VIDEO_PICTURE_QUEUE_SIZE, SUBPICTURE_QUEUE_SIZE))
+//视频帧队列的大小
 #define FRAME_QUEUE_SIZE 16
 
 
@@ -59,6 +55,8 @@ typedef struct {
     //flag
     int flag_exit;
     int flag_pause;
+    int flag_fullscreen;
+    int flag_resize;
     int forward;
 }   player_stat_t;
 

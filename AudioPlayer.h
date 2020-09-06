@@ -21,6 +21,8 @@ extern "C" {
 #define NUMBUFFERS (4)
 #define VOLUME_UP 0.2
 #define VOLUME_DOWN -0.2
+#define SPEED_UP 0.5
+#define SPEED_DOWN -0.5
 
 
 typedef struct _tFrame {
@@ -37,7 +39,8 @@ public:
     ~AudioPlayer();
     int decode();
     int audio_playing();
-    void adjustVolume(double v);
+    void adjust_volume(double v); 
+    void adjust_speed(double speed);
 
 private:
     int OpenAL_init();
@@ -72,6 +75,7 @@ private:
     ALuint m_buffers[NUMBUFFERS];
 
     double volume;    //“Ù¡ø
+    double speed;
 };
 
 
