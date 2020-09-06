@@ -35,23 +35,20 @@ typedef struct {
     AVFrame* frame;
     double pts;  //presentation timestamp
     double duration;
-}   frame_t;
+} frame_t;
 
 
 typedef struct {
     double pts;         // 当前帧(待播放)显示时间戳，播放后，当前帧变成上一帧
     double pts_drift;   // 当前帧显示时间戳与当前系统时钟时间的差值
     double last_updated;// 当前时钟(如视频时钟)最后一次更新时间，也可称当前时钟时间
-    double speed;       // 时钟速度控制，用于控制播放速度
-    int paused;         // 暂停标志
-}   play_clock_t;
+} play_clock_t;
 
 
 typedef struct { 
     play_clock_t audio_clk; // 音频时钟
     play_clock_t video_clk; // 视频时钟
     double frame_timer;
-    double audio_clock;
     //flag
     int flag_exit;
     int flag_pause;
@@ -59,7 +56,6 @@ typedef struct {
     int flag_resize;
     int forward;
 }   player_stat_t;
-
 
 
 double get_clock(play_clock_t* c);

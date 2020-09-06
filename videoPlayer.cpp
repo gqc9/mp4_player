@@ -3,12 +3,10 @@
 
 VideoPlayer::VideoPlayer(char* filepath, player_stat_t* is1) {
 	is = is1;
-
 	if (!(display_mutex = SDL_CreateMutex())) {
 		printf("SDL_CreateMutex(): %s\n", SDL_GetError());
 		return;
 	}
-
 	av_register_all();	//注册库
 	avformat_network_init();
 	pFormatCtx = avformat_alloc_context();
@@ -82,7 +80,7 @@ VideoPlayer::VideoPlayer(char* filepath, player_stat_t* is1) {
 
 	if (!screen) {
 		printf("SDL: could not create window - exiting:%s\n", SDL_GetError());
-		//return -1;
+		return;
 	}
 
 	sdlRenderer = SDL_CreateRenderer(screen, -1, 0);
@@ -114,7 +112,7 @@ void VideoPlayer::display_one_frame() {
 	//画面适配，适配后的像素数据存在pFrameYUV->data中
 	sws_scale(img_convert_ctx, (const unsigned char* const*)pFrame->data, pFrame->linesize, 0, pCodecCtx->height,
 		pFrameYUV->data, pFrameYUV->linesize);
-	printf("=======================================\n");
+	//printf("=======================================\n");
 	//SDL显示视频
 	SDL_LockMutex(display_mutex);
 	SDL_UpdateTexture(sdlTexture, NULL, pFrameYUV->data[0], pFrameYUV->linesize[0]);
@@ -233,7 +231,7 @@ int VideoPlayer::decode_frame(AVFrame* pFrame) {
 	while (1) {
 		while (1) {
 			if (av_read_frame(pFormatCtx, packet) < 0) {//解封装媒体文件
-				is->flag_exit = 1;
+				//is->flag_exit = 1;
 				//printf("av_read_frame() error.\n");
 				return 0;
 			}
@@ -278,8 +276,6 @@ int VideoPlayer::video_decode_thread() {
 		got_picture = decode_frame(p_frame);
 		if (got_picture < 0) {
 			av_frame_free(&p_frame);
-
-			printf("e\n");
 			return 0;
 		}
 		AVRational avr = {frame_rate.den, frame_rate.num};
@@ -319,7 +315,7 @@ int VideoPlayer::do_fullscreen() {
 
 
 int VideoPlayer::resize_window(int width, int height) {
-	//保持画面比例
+	//保持原始画面比例
 	double tmp = double(screen_h) / screen_w * width;
 	if (tmp < height) {
 		sdlRect.x = 0;
@@ -340,8 +336,7 @@ int VideoPlayer::resize_window(int width, int height) {
 	return 0;
 }
 
-int VideoPlayer::video_playing() {
+void VideoPlayer::video_playing() {
 	m_pPlay = std::move(std::make_shared<std::thread>(&VideoPlayer::video_play_thread, this));
 	m_pDecode = std::move(std::make_shared<std::thread>(&VideoPlayer::video_decode_thread, this));
-	return 0;
 }

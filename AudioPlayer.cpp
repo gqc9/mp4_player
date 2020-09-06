@@ -4,7 +4,7 @@
 AudioPlayer::AudioPlayer(char* filepath, player_stat_t* is1) {
     is = is1;
     volume = 1.0;
-    speed = 1.0;
+    speed_idx = 2; //初始播放速度为1.0，对应speeds数组的index为2
 
     av_register_all();	//注册库
     avformat_network_init();
@@ -110,10 +110,8 @@ int AudioPlayer::SoundCallback(ALuint& bufferID) {
     //将buffer放回缓冲区
     alSourceQueueBuffers(m_source, 1, &bufferID);
     //更新音频时钟
-    if (!isnan(is->audio_clock)) {
-        set_clock(&is->audio_clk, frame->pts);
-        //printf("audio pts %.2f\n", frame->pts);
-    }
+    set_clock(&is->audio_clk, frame->pts);
+    //printf("audio pts %.2f\n", frame->pts);
     //释放数据
     if (frame) {
         av_free(frame->data);
@@ -256,8 +254,9 @@ int AudioPlayer::audio_play_thread() {
 
 
 void AudioPlayer::forward_func(int second) {
+    printf("Timestamp from %.2fs", get_clock(&is->audio_clk));
     double target_pts = get_clock(&is->audio_clk) + second;
-    printf("volume to %.2f s\n", target_pts);
+    printf(" to %.2fs\n", target_pts);
 
     while (!queueData.empty()) {
         PTFRAME frame = queueData.front();
@@ -274,10 +273,13 @@ void AudioPlayer::forward_func(int second) {
 }
 
 
-void AudioPlayer::adjust_speed(double v) {
-    speed = FFMAX(FFMIN(2.0, v+speed), 0.5);
-    printf("speed to %.2f s\n", speed);
-    alSourcef(m_source, AL_PITCH, speed);
+void AudioPlayer::adjust_speed(int v) {
+    //speeds[speed_idx]是实际播放的速度
+    printf("Speed from %.2f", speeds[speed_idx]);
+    //使speed_idx保持在 0 ~ SPEED_NUM-1 之间
+    speed_idx = FFMAX(FFMIN(SPEED_NUM-1, v+speed_idx), 0); 
+    printf(" to %.2f\n", speeds[speed_idx]);
+    alSourcef(m_source, AL_PITCH, speeds[speed_idx]);
 }
 
 

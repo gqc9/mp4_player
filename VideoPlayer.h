@@ -8,7 +8,7 @@ class VideoPlayer {
 public:
 	VideoPlayer(char* filepath, player_stat_t* is);
 	~VideoPlayer();
-	int video_playing();
+	void video_playing();
 	int do_fullscreen();
 	int resize_window(int, int);
 public:
@@ -23,12 +23,10 @@ private:
 	int decode_frame(AVFrame* pFrame);
 	double compute_target_delay(double delay);
 	int render_refresh();
-	//void forward_func(int second);
 
 private:
 	std::shared_ptr<std::thread> m_pPlay;
 	std::shared_ptr<std::thread> m_pDecode;
-	std::shared_ptr<std::thread> m_pControl;
 
 	AVFormatContext* pFormatCtx; //解封装
 	AVCodecContext* pCodecCtx; //解码
@@ -45,8 +43,7 @@ private:
 	SDL_Window* screen; //SDL弹出的窗口
 	SDL_Texture* sdlTexture; //纹理
 	SDL_Rect sdlRect;
-	SDL_mutex* display_mutex;
+	SDL_mutex* display_mutex;	//播放一帧时加锁
 
 	double refresh_rate;	//刷新率=每秒多少帧
-
 };

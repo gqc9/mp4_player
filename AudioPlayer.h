@@ -1,13 +1,10 @@
 #pragma once
 
-#pragma once
-
 #include <stdio.h>
 #include <cstdlib>
 #include <queue>
 #include "al.h"
 #include "alc.h"
-
 #include "main.h"
 
 extern "C" {
@@ -21,8 +18,9 @@ extern "C" {
 #define NUMBUFFERS (4)
 #define VOLUME_UP 0.2
 #define VOLUME_DOWN -0.2
-#define SPEED_UP 0.5
-#define SPEED_DOWN -0.5
+#define SPEED_UP 1
+#define SPEED_DOWN -1
+#define SPEED_NUM 5 //speeds数组的大小（有几种可调的速度）
 
 
 typedef struct _tFrame {
@@ -40,7 +38,7 @@ public:
     int decode();
     int audio_playing();
     void adjust_volume(double v); 
-    void adjust_speed(double speed);
+    void adjust_speed(int v);
 
 private:
     int OpenAL_init();
@@ -69,13 +67,13 @@ private:
     int out_sample_rate;
     int out_channel_nb;
 
-
     std::queue<PTFRAME> queueData; //保存解码后数据
     ALuint m_source;
     ALuint m_buffers[NUMBUFFERS];
 
     double volume;    //音量
-    double speed;
+    const double speeds[SPEED_NUM] = { 0.5, 0.75, 1.0, 1.5, 2.0 };
+    int speed_idx;    //播放速度的index（在speeds数组中的）
 };
 
 
